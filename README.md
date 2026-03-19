@@ -38,3 +38,5 @@ Password123!
 This repository now includes self-contained TypeScript shims, Node built-in tests, and an offline-aware build wrapper so `npm run build` automatically falls back to `npm run typecheck` when Prisma/Next binaries are unavailable in a restricted environment. In a normal installed environment, `npm run build` still runs `prisma generate` followed by `next build`.
 
 For dependency advisories, use `npm run audit:prod`. It attempts `npm audit --omit=dev`, retries once without proxy variables when the npm advisory endpoint is blocked, and reports registry-access failures as an infrastructure warning instead of a misleading package failure.
+
+Before deploying, run `npm run verify:deploy` to execute the full repo-supported verification sequence (`test`, `typecheck`, `build`, and `audit:prod`).

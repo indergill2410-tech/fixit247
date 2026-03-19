@@ -40,6 +40,7 @@ npm install
 npm run prisma:generate
 npx prisma migrate deploy
 npm run prisma:seed
+npm run verify:deploy
 npm run dev
 ```
 

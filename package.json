@@ -13,7 +13,8 @@
     "prisma:generate": "node scripts/build.mjs --prisma-generate",
     "prisma:migrate": "prisma migrate deploy",
     "prisma:seed": "tsx prisma/seed.ts",
-    "audit:prod": "node scripts/audit.mjs"
+    "audit:prod": "node scripts/audit.mjs",
+    "verify:deploy": "node scripts/verify-deploy.mjs"
   },
   "dependencies": {
     "@prisma/client": "5.22.0",

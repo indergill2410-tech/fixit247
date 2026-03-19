@@ -18,3 +18,17 @@ test('audit wrapper retries without proxy variables on advisory endpoint failure
   assert.match(source, /npm advisory endpoint is unavailable from this environment/);
   assert.match(source, /process\.exit\(0\)/);
 });
+
+
+test('package.json exposes the deployment verification script', () => {
+  const pkg = JSON.parse(read('package.json'));
+  assert.equal(pkg.scripts['verify:deploy'], 'node scripts/verify-deploy.mjs');
+});
+
+test('deployment verification script runs the expected checks in order', () => {
+  const source = read('scripts/verify-deploy.mjs');
+  assert.match(source, /\['npm', \['test'\]\]/);
+  assert.match(source, /\['npm', \['run', 'typecheck'\]\]/);
+  assert.match(source, /\['npm', \['run', 'build'\]\]/);
+  assert.match(source, /\['npm', \['run', 'audit:prod'\]\]/);
+});
