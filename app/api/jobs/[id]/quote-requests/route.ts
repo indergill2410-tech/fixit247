@@ -4,7 +4,8 @@ import { prisma } from '@/lib/prisma';
 import { quoteSchema } from '@/lib/validation';
 import { NextResponse } from 'next/server';
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
+  const { id } = await context.params;
   const session = await getSession();
   if (!session || session.role !== 'TRADIE') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
@@ -15,7 +16,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
   const tradie = await prisma.tradieProfile.findUnique({ where: { userId: session.userId }, include: { leadCredits: true } });
   if (!tradie || !tradie.leadCredits) return NextResponse.json({ error: 'Tradie profile not found.' }, { status: 404 });
 
-  const quoteRequest = await prisma.quoteRequest.findUnique({ where: { jobId_tradieProfileId: { jobId: params.id, tradieProfileId: tradie.id } } });
+  const quoteRequest = await prisma.quoteRequest.findUnique({ where: { jobId_tradieProfileId: { jobId: id, tradieProfileId: tradie.id } } });
   if (!quoteRequest) return NextResponse.json({ error: 'Lead request not found.' }, { status: 404 });
 
   if (!quoteRequest.leadConsumed) {
@@ -26,7 +27,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     await prisma.lead.create({
       data: {
         tradieProfileId: tradie.id,
-        jobId: params.id,
+        jobId: id,
         priceAmount: 590
       }
     });
@@ -41,7 +42,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
         walletId: tradie.leadCredits.id,
         type: 'CONSUMED',
         delta: -1,
-        note: `Lead consumed to unlock job ${params.id}.`
+        note: `Lead consumed to unlock job ${id}.`
       }
     });
 
@@ -54,7 +55,6 @@ export async function POST(request: Request, { params }: { params: { id: string 
   const quote = await prisma.quote.create({
     data: {
       jobId: id,
-      jobId: params.id,
       tradieProfileId: tradie.id,
       tradieUserId: session.userId,
       title: parsed.data.title,
@@ -70,7 +70,6 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
   await prisma.quoteRequest.update({ where: { id: quoteRequest.id }, data: { status: 'SUBMITTED' } });
   await prisma.job.update({ where: { id: id }, data: { status: 'QUOTING' } });
-  await prisma.job.update({ where: { id: params.id }, data: { status: 'QUOTING' } });
 
   return NextResponse.json({ ok: true, quoteId: quote.id });
 }

@@ -12,6 +12,33 @@ export async function POST(request: Request) {
   const parsed = messageSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: 'Invalid message payload.' }, { status: 400 });
 
+  const tradieProfile =
+    session.role === 'TRADIE'
+      ? await prisma.tradieProfile.findUnique({ where: { userId: session.userId }, select: { id: true } })
+      : null;
+
+  const job = await prisma.job.findUnique({
+    where: { id: parsed.data.jobId },
+    include: {
+      homeownerProfile: true,
+      quoteRequests: true,
+      quotes: true
+    }
+  });
+
+  if (!job) return NextResponse.json({ error: 'Job not found.' }, { status: 404 });
+
+  const isHomeownerParticipant = session.role === 'HOMEOWNER' && job.homeownerProfile.userId === session.userId;
+  const isTradieParticipant =
+    session.role === 'TRADIE' &&
+    !!tradieProfile &&
+    (job.quoteRequests.some((request) => request.tradieProfileId === tradieProfile.id) ||
+      job.quotes.some((quote) => quote.tradieProfileId === tradieProfile.id));
+
+  if (!isHomeownerParticipant && !isTradieParticipant && session.role !== 'ADMIN') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   await prisma.message.create({
     data: {
       jobId: parsed.data.jobId,

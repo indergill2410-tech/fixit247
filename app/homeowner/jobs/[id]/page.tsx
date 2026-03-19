@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,11 +11,9 @@ import { ReviewForm } from '@/components/forms/review-form';
 
 export default async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const job = await prisma.job.findUnique({
-    where: { id },
-export default async function JobDetailPage({ params }: { params: { id: string } }) {
-  const job = await prisma.job.findUnique({
-    where: { id: params.id },
+  const session = await getSession();
+  const job = await prisma.job.findFirst({
+    where: { id, homeownerProfile: { userId: session!.userId } },
     include: {
       quotes: { include: { tradieProfile: { include: { user: true, reviews: true } } }, orderBy: { totalAmount: 'asc' } },
       messages: { include: { sender: true }, orderBy: { createdAt: 'asc' } },
