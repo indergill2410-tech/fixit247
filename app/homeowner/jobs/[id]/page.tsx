@@ -12,6 +12,9 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
   const { id } = await params;
   const job = await prisma.job.findUnique({
     where: { id },
+export default async function JobDetailPage({ params }: { params: { id: string } }) {
+  const job = await prisma.job.findUnique({
+    where: { id: params.id },
     include: {
       quotes: { include: { tradieProfile: { include: { user: true, reviews: true } } }, orderBy: { totalAmount: 'asc' } },
       messages: { include: { sender: true }, orderBy: { createdAt: 'asc' } },

@@ -1,6 +1,7 @@
 'use client';
 
 import { use, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -8,6 +9,8 @@ import { Card } from '@/components/ui/card';
 export default function ResetPasswordPage({ params }: { params: Promise<{ token: string }> }) {
   const router = useRouter();
   const { token } = use(params);
+export default function ResetPasswordPage({ params }: { params: { token: string } }) {
+  const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
 
   async function handleSubmit(formData: FormData) {
@@ -15,6 +18,7 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ token:
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token, password: String(formData.get('password') || '') })
+      body: JSON.stringify({ token: params.token, password: String(formData.get('password') || '') })
     });
     const result = await response.json();
     if (response.ok) {
