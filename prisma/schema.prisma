@@ -1,0 +1,299 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  HOMEOWNER
+  TRADIE
+  ADMIN
+}
+
+enum JobUrgency {
+  TODAY
+  THIS_WEEK
+  FLEXIBLE
+}
+
+enum JobStatus {
+  DRAFT
+  OPEN
+  QUOTING
+  BOOKED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  DISPUTED
+}
+
+enum QuoteStatus {
+  REQUESTED
+  SUBMITTED
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+enum SubscriptionPlan {
+  LEADS_10
+  LEADS_20
+  LEADS_30
+}
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+
+enum LeadLedgerType {
+  MONTHLY_ALLOCATION
+  ROLLOVER
+  PURCHASED
+  CONSUMED
+  ADJUSTMENT
+  REFUND
+  EXPIRED
+}
+
+enum ReviewStatus {
+  PUBLISHED
+  FLAGGED
+  REMOVED
+}
+
+enum MessageSenderType {
+  HOMEOWNER
+  TRADIE
+  ADMIN
+  SYSTEM
+}
+
+model User {
+  id                     String                 @id @default(cuid())
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+  email                  String                 @unique
+  passwordHash           String
+  fullName               String
+  phone                  String?
+  role                   Role
+  suburb                 String?
+  state                  String?
+  postcode               String?
+  avatarUrl              String?
+  homeownerProfile       HomeownerProfile?
+  tradieProfile          TradieProfile?
+  sentMessages           Message[]              @relation("MessageSender")
+  resetTokens            PasswordResetToken[]
+  quotes                 Quote[]                @relation("QuoteTradieUser")
+  reviewsWritten         Review[]               @relation("ReviewAuthor")
+}
+
+model HomeownerProfile {
+  id                 String  @id @default(cuid())
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  userId             String  @unique
+  repeatCustomerCode String? @unique
+  streakCount        Int     @default(0)
+  lastBookedAt       DateTime?
+  user               User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobs               Job[]
+}
+
+model TradieProfile {
+  id                   String               @id @default(cuid())
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  userId               String               @unique
+  businessName         String
+  abn                  String
+  licenceNumber        String?
+  yearsInBusiness      Int                  @default(1)
+  bio                  String
+  approvedAt           DateTime?
+  bannedAt             DateTime?
+  fastReplyStreak      Int                  @default(0)
+  averageResponseMins  Int                  @default(45)
+  serviceRadiusKm      Int                  @default(20)
+  serviceAreas         String[]
+  categories           String[]
+  availabilityNotes    String?
+  featured             Boolean              @default(false)
+  portfolio            PortfolioItem[]
+  leadCredits          LeadWallet?
+  leads                Lead[]
+  quoteRequests        QuoteRequest[]
+  quotes               Quote[]
+  reviews              Review[]
+  subscription         Subscription?
+  user                 User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PortfolioItem {
+  id            String        @id @default(cuid())
+  tradieId      String
+  title         String
+  description   String
+  imageUrl      String
+  tradieProfile TradieProfile @relation(fields: [tradieId], references: [id], onDelete: Cascade)
+}
+
+model Job {
+  id                  String        @id @default(cuid())
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  homeownerProfileId  String
+  title               String
+  category            String
+  description         String
+  urgency             JobUrgency
+  suburb              String
+  state               String
+  postcode            String
+  addressText         String?
+  budgetMin           Int
+  budgetMax           Int
+  availability        String
+  status              JobStatus     @default(OPEN)
+  photoUrls           String[]
+  matchedTradieIds    String[]
+  acceptedQuoteId     String?       @unique
+  homeownerProfile    HomeownerProfile @relation(fields: [homeownerProfileId], references: [id], onDelete: Cascade)
+  quoteRequests       QuoteRequest[]
+  quotes              Quote[]
+  messages            Message[]
+  review              Review?
+}
+
+model QuoteRequest {
+  id                 String   @id @default(cuid())
+  createdAt          DateTime @default(now())
+  jobId              String
+  tradieProfileId    String
+  status             QuoteStatus @default(REQUESTED)
+  leadConsumed       Boolean  @default(false)
+  job                Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  tradieProfile      TradieProfile @relation(fields: [tradieProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, tradieProfileId])
+}
+
+model Quote {
+  id                 String      @id @default(cuid())
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  jobId              String
+  tradieProfileId    String
+  tradieUserId       String
+  title              String
+  scope              String
+  lineItemsJson      Json
+  subtotalAmount     Int
+  serviceFeeAmount   Int
+  totalAmount        Int
+  estimatedStart     DateTime?
+  estimatedDuration  String?
+  status             QuoteStatus @default(SUBMITTED)
+  job                Job         @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  tradieProfile      TradieProfile @relation(fields: [tradieProfileId], references: [id], onDelete: Cascade)
+  tradieUser         User        @relation("QuoteTradieUser", fields: [tradieUserId], references: [id], onDelete: Cascade)
+}
+
+model Lead {
+  id              String        @id @default(cuid())
+  createdAt       DateTime      @default(now())
+  tradieProfileId String
+  jobId           String
+  priceAmount     Int           @default(590)
+  status          String        @default("CLAIMED")
+  tradieProfile   TradieProfile @relation(fields: [tradieProfileId], references: [id], onDelete: Cascade)
+}
+
+model LeadWallet {
+  id                String        @id @default(cuid())
+  tradieProfileId    String        @unique
+  monthlyAllowance   Int           @default(10)
+  availableLeads     Int           @default(10)
+  rolloverLeads      Int           @default(0)
+  currentPeriodStart DateTime      @default(now())
+  currentPeriodEnd   DateTime
+  ledgerEntries      LeadLedger[]
+  tradieProfile      TradieProfile @relation(fields: [tradieProfileId], references: [id], onDelete: Cascade)
+}
+
+model LeadLedger {
+  id            String         @id @default(cuid())
+  createdAt     DateTime       @default(now())
+  walletId      String
+  type          LeadLedgerType
+  delta         Int
+  note          String
+  wallet        LeadWallet     @relation(fields: [walletId], references: [id], onDelete: Cascade)
+}
+
+model Subscription {
+  id                  String             @id @default(cuid())
+  tradieProfileId      String             @unique
+  stripeCustomerId     String?            @unique
+  stripeSubscriptionId String?            @unique
+  plan                 SubscriptionPlan
+  status               SubscriptionStatus @default(TRIAL)
+  currentPeriodStart   DateTime           @default(now())
+  currentPeriodEnd     DateTime
+  cancelAtPeriodEnd    Boolean            @default(false)
+  tradieProfile        TradieProfile      @relation(fields: [tradieProfileId], references: [id], onDelete: Cascade)
+}
+
+model Message {
+  id             String            @id @default(cuid())
+  createdAt      DateTime          @default(now())
+  jobId          String
+  senderId       String?
+  senderType     MessageSenderType
+  body           String
+  job            Job               @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  sender         User?             @relation("MessageSender", fields: [senderId], references: [id], onDelete: SetNull)
+}
+
+model Review {
+  id               String        @id @default(cuid())
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  authorUserId     String
+  tradieProfileId  String
+  jobId            String        @unique
+  rating           Int
+  headline         String
+  body             String
+  status           ReviewStatus  @default(PUBLISHED)
+  author           User          @relation("ReviewAuthor", fields: [authorUserId], references: [id], onDelete: Cascade)
+  tradieProfile    TradieProfile @relation(fields: [tradieProfileId], references: [id], onDelete: Cascade)
+  job              Job           @relation(fields: [jobId], references: [id], onDelete: Cascade)
+}
+
+
+model Category {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  name       String   @unique
+  icon       String
+  active     Boolean  @default(true)
+}
+
+model PasswordResetToken {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
+  tokenHash  String   @unique
+  userId     String
+  usedAt     DateTime?
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
