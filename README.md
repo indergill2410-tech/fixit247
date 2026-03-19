@@ -36,4 +36,3 @@ Password123!
 ## Offline validation in restricted environments
 
 This repository now includes self-contained TypeScript shims, Node built-in tests, and an offline-aware build wrapper so `npm run build` automatically falls back to `npm run typecheck` when Prisma/Next binaries are unavailable in a restricted environment. In a normal installed environment, `npm run build` still runs `prisma generate` followed by `next build`.
-This repository now includes self-contained TypeScript shims and Node built-in tests so `npm install`, `npm run typecheck`, and `npm test` can run successfully even when access to the public npm registry is blocked.
