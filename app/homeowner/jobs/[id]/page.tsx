@@ -8,6 +8,10 @@ import { MessageComposer } from '@/components/forms/message-composer';
 import { formatCurrency } from '@/lib/utils';
 import { ReviewForm } from '@/components/forms/review-form';
 
+export default async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const job = await prisma.job.findUnique({
+    where: { id },
 export default async function JobDetailPage({ params }: { params: { id: string } }) {
   const job = await prisma.job.findUnique({
     where: { id: params.id },

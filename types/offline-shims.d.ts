@@ -17,6 +17,7 @@ declare module 'react' {
   export type PropsWithChildren<T = any> = T & { children?: any; key?: any; [key: string]: any };
   export type ButtonHTMLAttributes<T = any> = any;
   export function useState<T = any>(initial?: T): [T, (value: any) => void];
+  export function use<T = any>(value: any): T;
 }
 
 declare module 'next' {

@@ -53,6 +53,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
   const quote = await prisma.quote.create({
     data: {
+      jobId: id,
       jobId: params.id,
       tradieProfileId: tradie.id,
       tradieUserId: session.userId,
@@ -68,6 +69,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
   });
 
   await prisma.quoteRequest.update({ where: { id: quoteRequest.id }, data: { status: 'SUBMITTED' } });
+  await prisma.job.update({ where: { id: id }, data: { status: 'QUOTING' } });
   await prisma.job.update({ where: { id: params.id }, data: { status: 'QUOTING' } });
 
   return NextResponse.json({ ok: true, quoteId: quote.id });
