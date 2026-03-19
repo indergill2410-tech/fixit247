@@ -129,6 +129,7 @@ model TradieProfile {
   portfolio            PortfolioItem[]
   leadCredits          LeadWallet?
   leads                Lead[]
+  quoteRequests        QuoteRequest[]
   quotes               Quote[]
   reviews              Review[]
   subscription         Subscription?
