@@ -1,8 +1,9 @@
+import type { Route } from 'next';
 import Link from 'next/link';
 import { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
-export function Sidebar({ title, items }: { title: string; items: { href: string; label: string; icon: ReactNode }[] }) {
+export function Sidebar({ title, items }: { title: string; items: { href: Route; label: string; icon: ReactNode }[] }) {
   return (
     <aside className="rounded-[28px] border border-white/10 bg-white/5 p-5">
       <p className="mb-4 text-xs uppercase tracking-[0.28em] text-white/45">{title}</p>

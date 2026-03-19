@@ -23,6 +23,7 @@ declare module 'react' {
 declare module 'next' {
   export type NextConfig = any;
   export type Metadata = any;
+  export type Route<T extends string = string> = T;
 }
 
 declare module 'next/link' {
