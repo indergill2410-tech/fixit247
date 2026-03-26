@@ -6,70 +6,86 @@ import { getAllowanceForPlan, calculateRollover } from '@/lib/plans';
 import { prisma } from '@/lib/prisma';
 import { stripe } from '@/lib/stripe';
 
+function isSubscriptionPlan(value: string): value is SubscriptionPlan {
+  return value in SubscriptionPlan;
+}
+
 export async function POST(request: Request) {
   const signature = request.headers.get('stripe-signature');
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  if (!signature || !webhookSecret) {
+    return NextResponse.json({ error: 'Missing webhook signature or secret.' }, { status: 400 });
+  }
+
   const body = await request.text();
 
-  let event: any;
+  let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(body, signature || '', process.env.STRIPE_WEBHOOK_SECRET || 'whsec_placeholder');
+    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
   } catch (error) {
     return NextResponse.json({ error: `Webhook signature verification failed: ${(error as Error).message}` }, { status: 400 });
   }
 
   if (event.type === 'checkout.session.completed') {
-    const session = event.data.object as any;
+    const session = event.data.object as Stripe.Checkout.Session;
     const tradieProfileId = session.metadata?.tradieProfileId;
-    const plan = session.metadata?.plan as SubscriptionPlan | undefined;
-    if (tradieProfileId && plan) {
-      const wallet = await prisma.leadWallet.findUnique({ where: { tradieProfileId } });
-      const allowance = getAllowanceForPlan(plan);
-      const rollover = wallet ? calculateRollover(plan, wallet.availableLeads) : 0;
-      const nextEnd = addMonths(new Date(), 1);
+    const plan = session.metadata?.plan;
 
-      await prisma.subscription.upsert({
-        where: { tradieProfileId },
-        update: {
-          plan,
-          status: 'ACTIVE',
-          stripeCustomerId: session.customer?.toString(),
-          stripeSubscriptionId: session.subscription?.toString(),
-          currentPeriodStart: new Date(),
-          currentPeriodEnd: nextEnd
-        },
-        create: {
-          tradieProfileId,
-          plan,
-          status: 'ACTIVE',
-          stripeCustomerId: session.customer?.toString(),
-          stripeSubscriptionId: session.subscription?.toString(),
-          currentPeriodEnd: nextEnd
-        }
-      });
+    if (tradieProfileId && plan && isSubscriptionPlan(plan)) {
+      await prisma.$transaction(async (tx) => {
+        const wallet = await tx.leadWallet.findUnique({ where: { tradieProfileId } });
+        const allowance = getAllowanceForPlan(plan);
+        const rollover = wallet ? calculateRollover(plan, wallet.availableLeads) : 0;
+        const now = new Date();
+        const nextEnd = addMonths(now, 1);
 
-      const updatedWallet = await prisma.leadWallet.upsert({
-        where: { tradieProfileId },
-        update: {
-          monthlyAllowance: allowance,
-          availableLeads: allowance + rollover,
-          rolloverLeads: rollover,
-          currentPeriodStart: new Date(),
-          currentPeriodEnd: nextEnd
-        },
-        create: {
-          tradieProfileId,
-          monthlyAllowance: allowance,
-          availableLeads: allowance + rollover,
-          rolloverLeads: rollover,
-          currentPeriodEnd: nextEnd
-        }
-      });
+        await tx.subscription.upsert({
+          where: { tradieProfileId },
+          update: {
+            plan,
+            status: 'ACTIVE',
+            stripeCustomerId: session.customer?.toString(),
+            stripeSubscriptionId: session.subscription?.toString(),
+            currentPeriodStart: now,
+            currentPeriodEnd: nextEnd
+          },
+          create: {
+            tradieProfileId,
+            plan,
+            status: 'ACTIVE',
+            stripeCustomerId: session.customer?.toString(),
+            stripeSubscriptionId: session.subscription?.toString(),
+            currentPeriodStart: now,
+            currentPeriodEnd: nextEnd
+          }
+        });
 
-      await prisma.leadLedger.createMany({
-        data: [
-          { walletId: updatedWallet.id, type: 'MONTHLY_ALLOCATION', delta: allowance, note: `Stripe renewal allocation for ${plan}.` },
-          ...(rollover ? [{ walletId: updatedWallet.id, type: 'ROLLOVER' as const, delta: rollover, note: 'Eligible unused leads rolled into new period.' }] : [])
-        ]
+        const updatedWallet = await tx.leadWallet.upsert({
+          where: { tradieProfileId },
+          update: {
+            monthlyAllowance: allowance,
+            availableLeads: allowance + rollover,
+            rolloverLeads: rollover,
+            currentPeriodStart: now,
+            currentPeriodEnd: nextEnd
+          },
+          create: {
+            tradieProfileId,
+            monthlyAllowance: allowance,
+            availableLeads: allowance + rollover,
+            rolloverLeads: rollover,
+            currentPeriodStart: now,
+            currentPeriodEnd: nextEnd
+          }
+        });
+
+        await tx.leadLedger.createMany({
+          data: [
+            { walletId: updatedWallet.id, type: 'MONTHLY_ALLOCATION', delta: allowance, note: `Stripe renewal allocation for ${plan}.` },
+            ...(rollover ? [{ walletId: updatedWallet.id, type: 'ROLLOVER' as const, delta: rollover, note: 'Eligible unused leads rolled into new period.' }] : [])
+          ]
+        });
       });
     }
   }
