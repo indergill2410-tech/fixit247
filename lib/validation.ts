@@ -45,3 +45,12 @@ export const messageSchema = z.object({
   jobId: z.string().min(1),
   body: z.string().min(1).max(1000)
 });
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().email()
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(24),
+  password: z.string().min(8)
+});

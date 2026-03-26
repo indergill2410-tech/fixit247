@@ -3,9 +3,16 @@ import { addHours } from 'date-fns';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sendEmail } from '@/lib/notifications';
+import { forgotPasswordSchema } from '@/lib/validation';
 
 export async function POST(request: Request) {
-  const { email } = await request.json();
+  const body = await request.json();
+  const parsed = forgotPasswordSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Invalid forgot-password payload.' }, { status: 400 });
+  }
+
+  const { email } = parsed.data;
   const user = await prisma.user.findUnique({ where: { email } });
 
   if (user) {

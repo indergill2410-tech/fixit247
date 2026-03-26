@@ -2,9 +2,16 @@ import crypto from 'crypto';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { hashPassword } from '@/lib/auth';
+import { resetPasswordSchema } from '@/lib/validation';
 
 export async function POST(request: Request) {
-  const { token, password } = await request.json();
+  const body = await request.json();
+  const parsed = resetPasswordSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Invalid reset-password payload.' }, { status: 400 });
+  }
+
+  const { token, password } = parsed.data;
   const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
   const resetToken = await prisma.passwordResetToken.findUnique({ where: { tokenHash } });
 

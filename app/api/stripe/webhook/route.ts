@@ -1,6 +1,5 @@
 import { addMonths } from 'date-fns';
 import { NextResponse } from 'next/server';
-import Stripe from 'stripe';
 import { SubscriptionPlan } from '@prisma/client';
 import { getAllowanceForPlan, calculateRollover } from '@/lib/plans';
 import { prisma } from '@/lib/prisma';
@@ -20,7 +19,7 @@ export async function POST(request: Request) {
 
   const body = await request.text();
 
-  let event: Stripe.Event;
+  let event: ReturnType<(typeof stripe.webhooks)['constructEvent']>;
   try {
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
   } catch (error) {
@@ -28,7 +27,11 @@ export async function POST(request: Request) {
   }
 
   if (event.type === 'checkout.session.completed') {
-    const session = event.data.object as Stripe.Checkout.Session;
+    const session = event.data.object as {
+      metadata?: { tradieProfileId?: string; plan?: string };
+      customer?: { toString(): string } | string | null;
+      subscription?: { toString(): string } | string | null;
+    };
     const tradieProfileId = session.metadata?.tradieProfileId;
     const plan = session.metadata?.plan;
 

@@ -27,3 +27,14 @@ test('homeowner job detail page scopes job lookup to the signed-in homeowner', (
   assert.match(source, /findFirst\(/);
   assert.match(source, /homeownerProfile: \{ userId: session!\.userId \}/);
 });
+
+test('auth password reset routes validate payloads with shared schemas', () => {
+  const forgotSource = read('app/api/auth/forgot-password/route.ts');
+  const resetSource = read('app/api/auth/reset-password/route.ts');
+  const validationSource = read('lib/validation.ts');
+
+  assert.match(forgotSource, /forgotPasswordSchema\.safeParse/);
+  assert.match(resetSource, /resetPasswordSchema\.safeParse/);
+  assert.match(validationSource, /export const forgotPasswordSchema/);
+  assert.match(validationSource, /export const resetPasswordSchema/);
+});
