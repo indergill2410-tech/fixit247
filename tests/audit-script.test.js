@@ -32,3 +32,11 @@ test('deployment verification script runs the expected checks in order', () => {
   assert.match(source, /\['npm', \['run', 'build'\]\]/);
   assert.match(source, /\['npm', \['run', 'audit:prod'\]\]/);
 });
+
+
+test('verify-deploy GitHub Actions workflow exists', () => {
+  const source = read('.github/workflows/verify-deploy.yml');
+  assert.match(source, /name: Verify deploy/);
+  assert.match(source, /pull_request:/);
+  assert.match(source, /run: npm run verify:deploy/);
+});

@@ -40,3 +40,4 @@ This repository now includes self-contained TypeScript shims, Node built-in test
 For dependency advisories, use `npm run audit:prod`. It attempts `npm audit --omit=dev`, retries once without proxy variables when the npm advisory endpoint is blocked, and reports registry-access failures as an infrastructure warning instead of a misleading package failure.
 
 Before deploying, run `npm run verify:deploy` to execute the full repo-supported verification sequence (`test`, `typecheck`, `build`, and `audit:prod`).
+A matching GitHub Actions workflow lives at `.github/workflows/verify-deploy.yml` and runs the same verification sequence on pushes and pull requests.
