@@ -32,7 +32,7 @@ export async function POST(request: Request) {
   const isTradieParticipant =
     session.role === 'TRADIE' &&
     !!tradieProfile &&
-    (job.quoteRequests.some((request) => request.tradieProfileId === tradieProfile.id) ||
+    (job.quoteRequests.some((request) => request.tradieProfileId === tradieProfile.id && request.leadConsumed) ||
       job.quotes.some((quote) => quote.tradieProfileId === tradieProfile.id));
 
   if (!isHomeownerParticipant && !isTradieParticipant && session.role !== 'ADMIN') {

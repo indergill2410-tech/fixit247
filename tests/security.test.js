@@ -17,6 +17,7 @@ test('quote acceptance route requires homeowner session and ownership checks', (
 test('message route checks job participation before creating a message', () => {
   const source = read('app/api/messages/route.ts');
   assert.match(source, /quoteRequests\.some/);
+  assert.match(source, /request\.leadConsumed/);
   assert.match(source, /quotes\.some/);
   assert.match(source, /return NextResponse\.json\(\{ error: 'Forbidden' \}, \{ status: 403 \}\)/);
 });
@@ -37,4 +38,18 @@ test('auth password reset routes validate payloads with shared schemas', () => {
   assert.match(resetSource, /resetPasswordSchema\.safeParse/);
   assert.match(validationSource, /export const forgotPasswordSchema/);
   assert.match(validationSource, /export const resetPasswordSchema/);
+});
+
+test('review route ties review creation to completed jobs and accepted tradie', () => {
+  const source = read('app/api/reviews/route.ts');
+  assert.match(source, /job\.status !== JobStatus\.COMPLETED/);
+  assert.match(source, /job\.acceptedQuoteId/);
+  assert.match(source, /acceptedQuote\.tradieProfileId !== tradieProfileId/);
+});
+
+test('stripe webhook handles recurring invoices and excludes prior rollover credits', () => {
+  const source = read('app/api/stripe/webhook/route.ts');
+  assert.match(source, /event\.type === 'invoice\.paid'/);
+  assert.match(source, /billing_reason === 'subscription_cycle'/);
+  assert.match(source, /wallet\.availableLeads - wallet\.rolloverLeads/);
 });
