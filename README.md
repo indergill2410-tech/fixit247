@@ -41,3 +41,4 @@ For dependency advisories, use `npm run audit:prod`. It attempts `npm audit --om
 
 Before deploying, run `npm run verify:deploy` to execute the full repo-supported verification sequence (`test`, `typecheck`, `build`, and `audit:prod`).
 A matching GitHub Actions workflow lives at `.github/workflows/verify-deploy.yml` and runs the same verification sequence on pull requests (and manual workflow dispatch).
+For local parity with CI, run `npm ci` first, then run `npm run verify:deploy`.
