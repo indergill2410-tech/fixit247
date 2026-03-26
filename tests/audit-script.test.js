@@ -38,5 +38,7 @@ test('verify-deploy GitHub Actions workflow exists', () => {
   const source = read('.github/workflows/verify-deploy.yml');
   assert.match(source, /name: Verify deploy/);
   assert.match(source, /pull_request:/);
+  assert.match(source, /workflow_dispatch:/);
+  assert.doesNotMatch(source, /push:/);
   assert.match(source, /run: npm run verify:deploy/);
 });

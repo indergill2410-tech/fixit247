@@ -1,12 +1,8 @@
 name: Verify deploy
 
 on:
-  push:
-    branches:
-      - main
-      - work
-      - 'codex/**'
   pull_request:
+  workflow_dispatch:
 
 jobs:
   verify-deploy:
