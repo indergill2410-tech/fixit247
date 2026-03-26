@@ -57,7 +57,6 @@ export const resetPasswordSchema = z.object({
 
 export const reviewSchema = z.object({
   jobId: z.string().min(1),
-  tradieProfileId: z.string().min(1),
   rating: z.coerce.number().int().min(1).max(5),
   headline: z.string().min(3),
   body: z.string().min(10)

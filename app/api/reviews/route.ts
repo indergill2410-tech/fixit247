@@ -13,7 +13,7 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid review payload.' }, { status: 400 });
   }
-  const { jobId, tradieProfileId, rating, headline, body } = parsed.data;
+  const { jobId, rating, headline, body } = parsed.data;
 
   const job = await prisma.job.findUnique({ where: { id: jobId }, include: { homeownerProfile: true, quotes: true } });
   if (!job || job.homeownerProfile.userId !== session.userId) {
@@ -24,14 +24,14 @@ export async function POST(request: Request) {
   }
 
   const acceptedQuote = job.quotes.find((quote) => quote.id === job.acceptedQuoteId);
-  if (!acceptedQuote || acceptedQuote.tradieProfileId !== tradieProfileId) {
+  if (!acceptedQuote) {
     return NextResponse.json({ error: 'Review must target the accepted tradie for this job.' }, { status: 400 });
   }
 
   await prisma.review.create({
     data: {
       authorUserId: session.userId,
-      tradieProfileId,
+      tradieProfileId: acceptedQuote.tradieProfileId,
       jobId,
       rating,
       headline,

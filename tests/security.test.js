@@ -44,7 +44,7 @@ test('review route ties review creation to completed jobs and accepted tradie', 
   const source = read('app/api/reviews/route.ts');
   assert.match(source, /job\.status !== JobStatus\.COMPLETED/);
   assert.match(source, /job\.acceptedQuoteId/);
-  assert.match(source, /acceptedQuote\.tradieProfileId !== tradieProfileId/);
+  assert.match(source, /tradieProfileId: acceptedQuote\.tradieProfileId/);
 });
 
 test('stripe webhook handles recurring invoices and excludes prior rollover credits', () => {
